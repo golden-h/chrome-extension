@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Novel Translator",
+  "version": "1.25",
+  "description": "Translate novel chapters using ChatGPT",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "http://localhost/*",
+    "https://localhost/*",
+    "file:///*",
+    "https://truyencity.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["truyencity.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "https://localhost/*",
+        "file:///*",
+        "https://truyencity.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://chatgpt.com/g/g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi*"],
+      "js": ["chatgpt-content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["chatgpt-content.js", "truyencity.js", "config.json"],
+      "matches": ["https://chatgpt.com/*", "https://truyencity.com/*", "<all_urls>"]
+    }
+  ],
+  "action": {
+    "default_title": "Novel Translator",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
