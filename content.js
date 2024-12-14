@@ -567,45 +567,90 @@ async function updateChapterStatus(url) {
 }
 
 // Function to show notification in the center of screen
-function showNotification(message, duration = 2000) {
+function showNotification(message, duration = 3500) {
     // Create notification element
     const notification = document.createElement('div');
-    notification.textContent = message;
+    
+    // Create icon element
+    const icon = document.createElement('div');
+    icon.innerHTML = '✓';
+    icon.style.cssText = `
+        font-size: 40px;
+        margin-bottom: 10px;
+    `;
+    
+    // Create text element
+    const text = document.createElement('div');
+    text.textContent = message;
+    
+    notification.appendChild(icon);
+    notification.appendChild(text);
     
     // Add keyframe animations
     const style = document.createElement('style');
     style.textContent = `
         @keyframes notificationPopIn {
             0% { 
-                transform: translate(-50%, -50%) scale(0.5);
+                transform: translate(-50%, -50%) scale(0.5) rotate(-180deg);
                 opacity: 0;
             }
             50% { 
-                transform: translate(-50%, -50%) scale(1.1);
+                transform: translate(-50%, -50%) scale(1.2) rotate(10deg);
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(0.9) rotate(-5deg);
             }
             100% { 
-                transform: translate(-50%, -50%) scale(1);
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
                 opacity: 1;
             }
         }
         @keyframes notificationPulse {
             0% { 
-                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+                transform: translate(-50%, -50%) scale(1);
             }
-            70% { 
-                box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+            50% { 
+                box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0);
+                transform: translate(-50%, -50%) scale(1.05);
             }
             100% { 
                 box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        @keyframes notificationRotate {
+            0% {
+                transform: rotate(0deg);
+            }
+            25% {
+                transform: rotate(10deg);
+            }
+            75% {
+                transform: rotate(-10deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+        @keyframes iconSpin {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+            50% {
+                transform: rotate(180deg) scale(1.2);
+            }
+            100% {
+                transform: rotate(360deg) scale(1);
             }
         }
         @keyframes notificationFadeOut {
             0% { 
-                transform: translate(-50%, -50%) scale(1);
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
                 opacity: 1;
             }
             100% { 
-                transform: translate(-50%, -50%) scale(0.8);
+                transform: translate(-50%, -50%) scale(0.8) rotate(180deg);
                 opacity: 0;
             }
         }
@@ -617,29 +662,34 @@ function showNotification(message, duration = 2000) {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #00b09b, #96c93d);
+        background: linear-gradient(135deg, #2ecc71, #3498db);
         color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
+        padding: 30px 50px;
+        border-radius: 15px;
         z-index: 9999;
-        font-size: 18px;
-        font-weight: 500;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        animation: notificationPopIn 0.5s ease forwards,
-                   notificationPulse 1.5s infinite;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        font-size: 24px;
+        font-weight: 600;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        animation: notificationPopIn 0.8s ease forwards,
+                   notificationPulse 2s infinite;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        min-width: 300px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
     `;
+
+    icon.style.animation = 'iconSpin 2s infinite';
 
     // Add to document
     document.body.appendChild(notification);
 
     // Remove after duration with fade out animation
     setTimeout(() => {
-        notification.style.animation = 'notificationFadeOut 0.3s ease forwards';
+        notification.style.animation = 'notificationFadeOut 0.5s ease forwards';
         setTimeout(() => {
             notification.remove();
             style.remove();
-        }, 300);
+        }, 500);
     }, duration);
 }
 
