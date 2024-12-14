@@ -1,5 +1,5 @@
 // Constants
-const GPT_ID = 'g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi';
+const GPT_ID = "g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi";
 
 console.log('[Novel Translator] ChatGPT content script loaded');
 
@@ -335,6 +335,7 @@ function getLocalizedErrorMessage(message) {
 let sourceTabId = null;
 let initializationAttempt = 0;
 const maxAttempts = 3;
+let contentProcessed = false; // Add flag to track if content has been processed
 
 // Initialize function
 async function initialize() {
@@ -359,13 +360,14 @@ async function initialize() {
         const storageData = await safeStorageGet(['translationContent', 'sourceTabId']);
         console.log('[Novel Translator] Storage content:', storageData);
 
-        if (storageData?.translationContent) {
+        if (storageData?.translationContent && !contentProcessed) {
             console.log('[Novel Translator] Found content to translate, length:', storageData.translationContent.length);
             sourceTabId = storageData.sourceTabId;
             console.log('[Novel Translator] Source tab ID from storage:', sourceTabId);
+            contentProcessed = true; // Set flag before processing
             await handleTranslation(storageData.translationContent);
         } else {
-            console.log('[Novel Translator] No content to translate, waiting for requests');
+            console.log('[Novel Translator] No content to translate or content already processed, waiting for requests');
         }
     } catch (error) {
         console.error('[Novel Translator] Initialization error:', {
@@ -508,11 +510,12 @@ function hideStatus() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('[Novel Translator] Received message:', message);
     
-    if (message.type === 'TRANSLATE_CONTENT') {
+    if (message.type === 'TRANSLATE_CONTENT' && !contentProcessed) {
         console.log('[Novel Translator] Processing TRANSLATE_CONTENT message');
         console.log('[Novel Translator] Source tab ID:', message.sourceTabId);
         
         sourceTabId = message.sourceTabId;
+        contentProcessed = true; // Set flag before processing
         
         // Handle the async operation properly
         handleTranslation(message.content)
@@ -520,6 +523,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ success: true });
             })
             .catch((error) => {
+                contentProcessed = false; // Reset flag on error
                 sendResponse({ success: false, error: error.message });
             });
             
