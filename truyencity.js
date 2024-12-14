@@ -312,6 +312,13 @@ async function postChapterToTruyencity(data) {
     }
 
     console.log('[TruyencityTools] Post process completed successfully');
+    
+    // Send success message to background script to handle tab operations
+    chrome.runtime.sendMessage({
+        action: 'truyencityPostComplete',
+        success: true
+    });
+    
     return true;
 }
 

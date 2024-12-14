@@ -556,6 +556,20 @@ async function updateChapterStatus(url) {
     }
 }
 
+// Function to find and click Mark Done button
+async function clickMarkDoneButton() {
+    const markDoneButton = Array.from(document.querySelectorAll('button')).find(button => 
+        button.textContent.includes('Mark Done')
+    );
+    if (markDoneButton) {
+        markDoneButton.click();
+        console.log('[Novel Translator] Clicked Mark Done button');
+        return true;
+    }
+    console.log('[Novel Translator] Mark Done button not found');
+    return false;
+}
+
 // Listen for messages from the webpage
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('[Novel Translator] Received message:', message);
@@ -607,6 +621,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.error('[Novel Translator] Error handling translation content:', error);
             sendResponse({ success: false, error: error.message });
         }
+        return true;
+    }
+
+    if (message.action === 'postCompleted' && message.success) {
+        console.log('[Novel Translator] Post completed successfully, clicking Mark Done button');
+        clickMarkDoneButton().then(result => {
+            console.log('[Novel Translator] Mark Done button click result:', result);
+        });
         return true;
     }
 

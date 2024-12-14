@@ -552,6 +552,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
             return true;
         }
+
+        if (message.action === 'truyencityPostComplete' && message.success) {
+            log('info', 'TruyenCity post completed, handling tab operations');
+            
+            // Get current tab (TruyenCity tab)
+            const truyencityTabId = sender.tab.id;
+            
+            // Find and notify the original tab
+            chrome.tabs.query({}, function(tabs) {
+                tabs.forEach(tab => {
+                    if (tab.id !== truyencityTabId) {
+                        chrome.tabs.sendMessage(tab.id, {
+                            action: 'postCompleted',
+                            success: true
+                        });
+                    }
+                });
+                
+                // Close TruyenCity tab
+                chrome.tabs.remove(truyencityTabId);
+            });
+            
+            return true;
+        }
     } catch (error) {
         log('error', 'Error processing message', {
             error: {
