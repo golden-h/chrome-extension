@@ -69,50 +69,131 @@ async function waitForChatGPTResponse(maxRetries = 3, timeout = 120000) {
     console.log('[Novel Translator] Waiting for ChatGPT response');
     
     try {
-        // First wait for the response container
-        const responseElement = await waitForElement([
-            '[data-message-author-role="assistant"]'
-        ], timeout);
-        
-        console.log('[Novel Translator] Found response container, waiting for action buttons');
-        
-        // Then wait for action buttons to appear (indicates response is complete)
-        const actionButtons = await waitForElement([
+        // Wait for action buttons to appear
+        const button = await waitForElement([
             '[data-testid="voice-play-turn-action-button"]',
             '[data-testid="copy-turn-action-button"]'
         ], timeout);
         
-        console.log('[Novel Translator] Action buttons found, extracting content');
-        
-        // Now get the markdown content
-        const markdownElement = responseElement.querySelector('.markdown.prose');
-        if (!markdownElement) {
-            console.error('[Novel Translator] Could not find markdown content');
-            return '';
+        console.log('[Novel Translator] Action buttons found, finding conversation turn');
+
+        // Find the conversation turn div by traversing up
+        let conversationTurn = button;
+        while (conversationTurn && !conversationTurn.classList.contains('group/conversation-turn')) {
+            conversationTurn = conversationTurn.parentElement;
         }
 
-        // Get all paragraphs, including those after <hr> tags
-        const paragraphs = Array.from(markdownElement.getElementsByTagName('p'));
+        if (!conversationTurn) {
+            throw new Error('Could not find conversation turn div');
+        }
+
+        console.log('[Novel Translator] Found conversation turn, extracting markdown content');
+
+        // Find markdown content
+        const markdownDiv = conversationTurn.querySelector('.markdown.prose.w-full.break-words');
+        if (!markdownDiv) {
+            throw new Error('Could not find markdown content');
+        }
+
+        // Get all paragraphs
+        const paragraphs = Array.from(markdownDiv.querySelectorAll('p'));
         console.log('[Novel Translator] Found paragraphs:', paragraphs.length);
-        
-        // Filter out footer and empty paragraphs, and extract text
+
+        // Extract and filter text
         const content = paragraphs
             .map(p => p.textContent.trim())
-            .filter(text => text && !text.includes('Truyện được dịch bởi'))
-            .join('\n');
+            .filter(text => {
+                if (!text) {
+                    console.log('[Novel Translator] Filtered out empty paragraph');
+                    return false;
+                }
+                if (text.includes('Truyện được dịch bởi')) {
+                    console.log('[Novel Translator] Filtered out footer');
+                    return false;
+                }
+                return true;
+            })
+            .join('\n\n');
 
-        console.log('[Novel Translator] Raw content:', content);
-        
         if (!content) {
-            console.error('[Novel Translator] No valid content found');
-            return '';
+            console.error('[Novel Translator] No content extracted');
+            console.log('[Novel Translator] Markdown HTML:', markdownDiv.innerHTML);
+            throw new Error('No translation received');
         }
+
+        console.log('[Novel Translator] Successfully extracted content:', {
+            length: content.length,
+            preview: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+        });
 
         return content;
     } catch (error) {
         console.error('[Novel Translator] Error waiting for response:', error);
         throw error;
     }
+}
+
+// Function to send translation
+async function sendTranslation(content) {
+    console.log('[Novel Translator] Sending translation');
+    updateStatus('Đã nhận được bản dịch');
+
+    // Function to split translation into chunks
+    const chunkString = (str, size) => {
+        const chunks = [];
+        for (let i = 0; i < str.length; i += size) {
+            chunks.push(str.slice(i, i + size));
+        }
+        return chunks;
+    };
+
+    // Handle translation sending
+    const MAX_CHUNK_SIZE = 4000; // 4KB chunks
+
+    if (content.length > MAX_CHUNK_SIZE) {
+        const chunks = chunkString(content, MAX_CHUNK_SIZE);
+        const totalChunks = chunks.length;
+        
+        console.log(`[Novel Translator] Splitting translation into ${totalChunks} chunks`);
+        updateStatus(`Đang gửi bản dịch (0/${totalChunks} phần)`);
+
+        // Send chunks
+        for (let i = 0; i < chunks.length; i++) {
+            updateStatus(`Đang gửi bản dịch (${i + 1}/${totalChunks} phần)`);
+            await sendMessageWithRetry({
+                action: 'sendTranslation',
+                translation: chunks[i],
+                chunkIndex: i,
+                totalChunks: totalChunks,
+                isChunked: true
+            });
+        }
+
+        // Send completion message
+        await sendMessageWithRetry({
+            action: 'sendTranslation',
+            isComplete: true,
+            totalChunks: totalChunks,
+            isChunked: true
+        });
+    } else {
+        await sendMessageWithRetry({
+            action: 'sendTranslation',
+            translation: content,
+            isChunked: false
+        });
+    }
+
+    console.log('[Novel Translator] Translation sent successfully');
+    updateStatus('Hoàn thành!', 'success');
+
+    // Clear storage AFTER successful send
+    await safeStorageSet({ translationContent: null });
+
+    // Close the ChatGPT tab after a short delay
+    setTimeout(() => {
+        window.close();
+    }, 1000);
 }
 
 // Function to inject content to ChatGPT input
@@ -228,75 +309,13 @@ async function handleTranslation(content) {
         updateStatus('Đang đợi ChatGPT trả lời...');
         const translation = await waitForChatGPTResponse(5, 180000);
         
-        if (!translation) {
-            throw new Error('No translation received');
-        }
-
-        if (typeof translation !== 'string') {
-            console.error('[Novel Translator] Invalid translation type:', typeof translation);
+        if (!translation || typeof translation !== 'string') {
+            console.error('[Novel Translator] Invalid translation:', translation);
             throw new Error('Invalid translation type: ' + typeof translation);
         }
 
         console.log('[Novel Translator] Translation received, length:', translation.length);
-        updateStatus('Đã nhận được bản dịch');
-
-        // Function to split translation into chunks
-        const chunkString = (str, size) => {
-            const chunks = [];
-            for (let i = 0; i < str.length; i += size) {
-                chunks.push(str.slice(i, i + size));
-            }
-            return chunks;
-        };
-
-        // Handle translation sending
-        const MAX_CHUNK_SIZE = 50000; // 50KB chunks
-
-        if (translation.length > MAX_CHUNK_SIZE) {
-            const chunks = chunkString(translation, MAX_CHUNK_SIZE);
-            const totalChunks = chunks.length;
-            
-            console.log(`[Novel Translator] Splitting translation into ${totalChunks} chunks`);
-            updateStatus(`Đang gửi bản dịch (0/${totalChunks} phần)`);
-
-            // Send chunks
-            for (let i = 0; i < chunks.length; i++) {
-                updateStatus(`Đang gửi bản dịch (${i + 1}/${totalChunks} phần)`);
-                await sendMessageWithRetry({
-                    action: 'sendTranslation',
-                    translation: chunks[i],
-                    chunkIndex: i,
-                    totalChunks: totalChunks,
-                    isChunked: true
-                });
-            }
-
-            // Send completion message
-            await sendMessageWithRetry({
-                action: 'sendTranslation',
-                isComplete: true,
-                totalChunks: totalChunks,
-                isChunked: true
-            });
-        } else {
-            await sendMessageWithRetry({
-                action: 'sendTranslation',
-                translation: translation,
-                isChunked: false
-            });
-        }
-
-        console.log('[Novel Translator] Translation sent successfully');
-        updateStatus('Hoàn thành!', 'success');
-
-        // Clear storage
-        await safeStorageSet({ translationContent: null });
-
-        // Close the ChatGPT tab after a short delay
-        setTimeout(() => {
-            window.close();
-        }, 1000);
-        
+        await sendTranslation(translation);
     } catch (error) {
         console.error('[Novel Translator] Error in translation process:', error);
         updateStatus('Lỗi: ' + getLocalizedErrorMessage(error.message), 'error');
