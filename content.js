@@ -571,88 +571,72 @@ function showNotification(message, duration = 3500) {
     // Create notification element
     const notification = document.createElement('div');
     
-    // Create icon element
-    const icon = document.createElement('div');
-    icon.innerHTML = '✓';
-    icon.style.cssText = `
-        font-size: 40px;
-        margin-bottom: 10px;
-    `;
+    // Create loading spinner element
+    const spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
     
     // Create text element
     const text = document.createElement('div');
     text.textContent = message;
+    text.style.marginTop = '15px';
     
-    notification.appendChild(icon);
+    notification.appendChild(spinner);
     notification.appendChild(text);
     
     // Add keyframe animations
     const style = document.createElement('style');
     style.textContent = `
-        @keyframes notificationPopIn {
+        @keyframes spin {
             0% { 
-                transform: translate(-50%, -50%) scale(0.5) rotate(-180deg);
-                opacity: 0;
-            }
-            50% { 
-                transform: translate(-50%, -50%) scale(1.2) rotate(10deg);
-            }
-            70% {
-                transform: translate(-50%, -50%) scale(0.9) rotate(-5deg);
+                transform: rotate(0deg);
             }
             100% { 
-                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                transform: rotate(360deg);
+            }
+        }
+        
+        @keyframes notificationPopIn {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.7);
+                opacity: 0;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1);
                 opacity: 1;
             }
         }
+        
         @keyframes notificationPulse {
             0% { 
                 box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
-                transform: translate(-50%, -50%) scale(1);
             }
-            50% { 
+            70% { 
                 box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0);
-                transform: translate(-50%, -50%) scale(1.05);
             }
             100% { 
                 box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-                transform: translate(-50%, -50%) scale(1);
             }
         }
-        @keyframes notificationRotate {
-            0% {
-                transform: rotate(0deg);
-            }
-            25% {
-                transform: rotate(10deg);
-            }
-            75% {
-                transform: rotate(-10deg);
-            }
-            100% {
-                transform: rotate(0deg);
-            }
-        }
-        @keyframes iconSpin {
-            0% {
-                transform: rotate(0deg) scale(1);
-            }
-            50% {
-                transform: rotate(180deg) scale(1.2);
-            }
-            100% {
-                transform: rotate(360deg) scale(1);
-            }
-        }
+        
         @keyframes notificationFadeOut {
             0% { 
-                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                transform: translate(-50%, -50%) scale(1);
                 opacity: 1;
             }
             100% { 
-                transform: translate(-50%, -50%) scale(0.8) rotate(180deg);
+                transform: translate(-50%, -50%) scale(0.7);
                 opacity: 0;
             }
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            margin: 0 auto;
+            animation: spin 1s linear infinite;
         }
     `;
     document.head.appendChild(style);
@@ -662,34 +646,30 @@ function showNotification(message, duration = 3500) {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #2ecc71, #3498db);
+        background: linear-gradient(135deg, #2196F3, #1976D2);
         color: white;
         padding: 30px 50px;
         border-radius: 15px;
         z-index: 9999;
         font-size: 24px;
-        font-weight: 600;
+        font-weight: 500;
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        animation: notificationPopIn 0.8s ease forwards,
+        animation: notificationPopIn 0.3s ease forwards,
                    notificationPulse 2s infinite;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         text-align: center;
         min-width: 300px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
     `;
-
-    icon.style.animation = 'iconSpin 2s infinite';
 
     // Add to document
     document.body.appendChild(notification);
 
     // Remove after duration with fade out animation
     setTimeout(() => {
-        notification.style.animation = 'notificationFadeOut 0.5s ease forwards';
+        notification.style.animation = 'notificationFadeOut 0.3s ease forwards';
         setTimeout(() => {
             notification.remove();
             style.remove();
-        }, 500);
+        }, 300);
     }, duration);
 }
 
