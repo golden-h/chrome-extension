@@ -494,6 +494,16 @@ function injectTranslation(translation) {
         const currentUrl = window.location.href;
         updateChapterStatus(currentUrl);
         
+        // Get chapter number from title or URL
+        let chapterText = '';
+        const titleElement = document.querySelector('h1');
+        if (titleElement) {
+            chapterText = titleElement.textContent.trim();
+        }
+        
+        // Show completion notification
+        showNotification(`Đã dịch xong ${chapterText}`);
+        
         console.log('[Novel Translator] Translation injected and events triggered');
         return;
     }
@@ -556,6 +566,83 @@ async function updateChapterStatus(url) {
     }
 }
 
+// Function to show notification in the center of screen
+function showNotification(message, duration = 2000) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    
+    // Add keyframe animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes notificationPopIn {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        @keyframes notificationPulse {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+            }
+            70% { 
+                box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+            }
+            100% { 
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+        @keyframes notificationFadeOut {
+            0% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        z-index: 9999;
+        font-size: 18px;
+        font-weight: 500;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        animation: notificationPopIn 0.5s ease forwards,
+                   notificationPulse 1.5s infinite;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    `;
+
+    // Add to document
+    document.body.appendChild(notification);
+
+    // Remove after duration with fade out animation
+    setTimeout(() => {
+        notification.style.animation = 'notificationFadeOut 0.3s ease forwards';
+        setTimeout(() => {
+            notification.remove();
+            style.remove();
+        }, 300);
+    }, duration);
+}
+
 // Function to find and click Mark Done button
 async function clickMarkDoneButton() {
     const markDoneButton = Array.from(document.querySelectorAll('button')).find(button => 
@@ -564,7 +651,33 @@ async function clickMarkDoneButton() {
     if (markDoneButton) {
         markDoneButton.click();
         console.log('[Novel Translator] Clicked Mark Done button');
-        return true;
+        
+        // Get chapter number from URL or title
+        let chapterText = '';
+        const titleElement = document.querySelector('h1');
+        if (titleElement) {
+            chapterText = titleElement.textContent.trim();
+        }
+        
+        // Show completion notification
+        showNotification(`Đã hoàn thành ${chapterText}`);
+        
+        // Wait a short time for UI updates
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Find and click Back to Chapter List button
+        const backButton = Array.from(document.querySelectorAll('button')).find(button => 
+            button.textContent.includes('Back to Chapter List')
+        );
+        
+        if (backButton) {
+            backButton.click();
+            console.log('[Novel Translator] Clicked Back to Chapter List button');
+            return true;
+        } else {
+            console.log('[Novel Translator] Back to Chapter List button not found');
+            return false;
+        }
     }
     console.log('[Novel Translator] Mark Done button not found');
     return false;
