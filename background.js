@@ -16,13 +16,6 @@ console.log('BACKGROUND SCRIPT STARTING - IMMEDIATE LOG');
 const CHATGPT_URL = 'https://chatgpt.com/g/g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi';
 const DEBUG = true;
 
-// Test chrome API availability
-if (chrome && chrome.runtime) {
-    console.log('Chrome API is available');
-} else {
-    console.error('Chrome API is not available');
-}
-
 // Enhanced logging function
 function log(type, message, data = null) {
     if (!DEBUG) return;
@@ -43,6 +36,15 @@ function log(type, message, data = null) {
     }
 }
 
+log('info', 'Background script starting');
+
+// Test chrome API availability
+if (chrome && chrome.runtime) {
+    log('info', 'Chrome API is available');
+} else {
+    log('error', 'Chrome API is not available');
+}
+
 // Thêm biến để theo dõi tab IDs và pending messages
 let novelTabId = null;
 let chatGPTTabId = null;
@@ -50,7 +52,7 @@ let pendingMessages = new Map();
 let translationChunks = new Map(); // Store chunks for reassembly
 
 // Immediate initialization logging
-console.log('Setting up background script variables');
+log('info', 'Setting up background script variables');
 
 // Function to load configuration
 async function loadConfig() {
@@ -62,22 +64,22 @@ async function loadConfig() {
         await new Promise((resolve, reject) => {
             chrome.storage.local.set(config, () => {
                 if (chrome.runtime.lastError) {
-                    console.error('Error saving config:', chrome.runtime.lastError);
+                    log('error', 'Error saving config:', chrome.runtime.lastError);
                     reject(chrome.runtime.lastError);
                 } else {
-                    console.log('Config loaded successfully:', config);
+                    log('info', 'Config loaded successfully:', config);
                     resolve();
                 }
             });
         });
     } catch (error) {
-        console.error('Error loading config:', error);
+        log('error', 'Error loading config:', error);
     }
 }
 
 // Test chrome.runtime.onInstalled
 chrome.runtime.onInstalled.addListener((details) => {
-    console.log('Extension installed/updated:', details);
+    log('info', 'Extension installed/updated:', details);
     loadConfig();
 });
 
@@ -308,6 +310,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     log('info', 'Received message in background script', { message, sender });
 
     try {
+        if (message.action === 'truyencityPostComplete') {
+            log('info', 'Post completed, sending completion message to novel tab');
+            // Send completion message to novel tab
+            if (novelTabId) {
+                chrome.tabs.sendMessage(novelTabId, {
+                    action: 'postCompleted',
+                    success: true
+                }, () => {
+                    // After sending message, close the Truyencity tab
+                    chrome.tabs.remove(sender.tab.id);
+                });
+            }
+            return true;
+        }
+
         if (message.action === 'postToTruyencity') {
             log('info', 'Posting to Truyencity', { url: message.url });
             

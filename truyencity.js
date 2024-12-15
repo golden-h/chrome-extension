@@ -313,6 +313,9 @@ async function postChapterToTruyencity(data) {
 
     console.log('[TruyencityTools] Post process completed successfully');
     
+    // Wait a moment for any final UI updates
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Send success message to background script to handle tab operations
     chrome.runtime.sendMessage({
         action: 'truyencityPostComplete',

@@ -500,15 +500,20 @@ function injectTranslation(translation) {
         if (titleElement) {
             chapterText = titleElement.textContent.trim();
         }
-        
-        // Show completion notification
-        showNotification(`Đã dịch xong ${chapterText}`);
-        
-        console.log('[Novel Translator] Translation injected and events triggered');
-        return;
-    }
 
-    console.error('[Novel Translator] Could not find translation textareas');
+        // After translation is complete, trigger the Truyencity button click
+        console.log('[Novel Translator] Translation complete, clicking Truyencity button');
+        const truyencityButton = document.querySelector('#truyencity-post-button');
+        if (truyencityButton) {
+            // Small delay to ensure content is properly set
+            setTimeout(() => {
+                truyencityButton.click();
+                console.log('[Novel Translator] Truyencity button clicked');
+            }, 500);
+        } else {
+            console.error('[Novel Translator] Could not find Truyencity button');
+        }
+    }
 }
 
 // Function to update chapter status in JSON file
@@ -726,7 +731,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         try {
             console.log('[Novel Translator] Injecting translation of length:', message.translation.length);
-            injectTranslation(message.translation);
+            console.log('[Novel Translator] Translation preview:', message.translation.substring(0, 100) + '...');
+            
+            // Thử inject vài lần trong trường hợp React chưa render xong
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            const tryInject = () => {
+                if (attempts >= maxAttempts) {
+                    console.error('[Novel Translator] Failed to inject translation after', maxAttempts, 'attempts');
+                    return;
+                }
+                
+                attempts++;
+                console.log('[Novel Translator] Injection attempt', attempts);
+                
+                try {
+                    injectTranslation(message.translation);
+                    console.log('[Novel Translator] Translation injected successfully');
+                } catch (error) {
+                    console.error('[Novel Translator] Error injecting translation:', error);
+                    if (attempts < maxAttempts) {
+                        setTimeout(tryInject, 1000);
+                    }
+                }
+            };
+            
+            tryInject();
             sendResponse({ success: true });
         } catch (error) {
             console.error('[Novel Translator] Error injecting translation:', error);
@@ -776,45 +807,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     return false;
-});
-
-// Listen for translation from ChatGPT tab
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[Novel Translator] Received message:', message);
-
-    if (message.type === 'TRANSLATION_COMPLETE') {
-        console.log('[Novel Translator] Received translation, length:', message.translation.length);
-        console.log('[Novel Translator] Translation preview:', message.translation.substring(0, 100) + '...');
-        
-        // Thử inject vài lần trong trường hợp React chưa render xong
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        const tryInject = () => {
-            if (attempts >= maxAttempts) {
-                console.error('[Novel Translator] Failed to inject translation after', maxAttempts, 'attempts');
-                return;
-            }
-            
-            attempts++;
-            console.log('[Novel Translator] Injection attempt', attempts);
-            
-            injectTranslation(message.translation);
-            
-            // Nếu không tìm thấy textarea, thử lại sau 500ms
-            if (!document.querySelector('textarea[placeholder="Paste translated content here..."]')) {
-                setTimeout(tryInject, 500);
-            }
-        };
-        
-        tryInject();
-        sendResponse({ success: true });
-    }
-
-    if (message.type === 'TRANSLATION_ERROR') {
-        console.error('[Novel Translator] Translation error:', message.error);
-        alert(`Translation error: ${message.error}`);
-    }
 });
 
 // Start the extension
