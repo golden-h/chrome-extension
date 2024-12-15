@@ -88,12 +88,29 @@ async function injectContentToChatGPT(content) {
         textarea.value = content;
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-        // Find and click send button
-        const sendButton = document.querySelector('button[data-testid="send-button"]');
-        if (sendButton && !sendButton.disabled) {
-            sendButton.click();
-            console.log('[Novel Translator] Content sent to ChatGPT');
+        // Find and click send button with retry
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts) {
+            // Specifically look for the send button in the main chat interface
+            const sendButton = document.querySelector('form button[data-testid="send-button"]');
+            if (sendButton && !sendButton.disabled && sendButton.offsetParent !== null) {
+                // Only log if we're sure it's the send button
+                if (sendButton.querySelector('svg')) {
+                    console.log('[Novel Translator] Found ChatGPT send button');
+                    sendButton.click();
+                    console.log('[Novel Translator] Content sent to ChatGPT');
+                    return;
+                }
+            }
+            
+            console.log(`[Novel Translator] Attempt ${attempts + 1}: Send button not ready, waiting...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
         }
+        
+        console.error('[Novel Translator] Failed to find or click send button after', maxAttempts, 'attempts');
     } catch (error) {
         console.error('[Novel Translator] Error injecting content:', error);
     }
@@ -356,6 +373,102 @@ function addTruyencityButton() {
     console.log('[Novel Translator] Truyencity button added');
 }
 
+// Function to add floating auto-run button
+function addFloatingAutoRunButton() {
+    // Check if we're on the correct page
+    if (!window.location.href.includes('http://localhost:3000/')) {
+        return;
+    }
+
+    // Create floating button container
+    const floatingButton = document.createElement('div');
+    floatingButton.style.cssText = `
+        position: fixed;
+        bottom: 200px;
+        right: 20px;
+        z-index: 10000;
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    `;
+
+    // Add icon using emoji
+    const icon = document.createElement('span');
+    icon.textContent = '🔄';
+    icon.style.fontSize = '20px';
+
+    // Add text
+    const text = document.createElement('span');
+    text.textContent = 'Auto Run';
+
+    floatingButton.appendChild(icon);
+    floatingButton.appendChild(text);
+
+    // Add hover effect
+    floatingButton.onmouseover = () => {
+        floatingButton.style.transform = 'scale(1.05)';
+        floatingButton.style.backgroundColor = '#45a049';
+    };
+    floatingButton.onmouseout = () => {
+        floatingButton.style.transform = 'scale(1)';
+        floatingButton.style.backgroundColor = '#4CAF50';
+    };
+
+    // Add click handler
+    floatingButton.onclick = async () => {
+        try {
+            // Find and click "Not Translated" filter button
+            const notTranslatedButton = Array.from(document.querySelectorAll('button'))
+                .find(button => button.textContent?.trim() === 'Not Translated');
+            if (notTranslatedButton) {
+                notTranslatedButton.click();
+                // Small delay to let the filter take effect
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Find and click "Not Done" filter button
+            const notDoneButton = Array.from(document.querySelectorAll('button'))
+                .find(button => button.textContent?.trim() === 'Not Done');
+            if (notDoneButton) {
+                notDoneButton.click();
+                // Small delay to let the filter take effect
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // After filters are applied, find the first chapter in the filtered list
+            const chapters = document.querySelector('.space-y-2');
+            if (chapters) {
+                const firstChapter = chapters.querySelector('button');
+                if (firstChapter) {
+                    // Store a flag in localStorage before clicking
+                    localStorage.setItem('autoTranslateNext', 'true');
+                    firstChapter.click();
+                    showNotification('Opening chapter...', 2000);
+                } else {
+                    showNotification('No chapters found after filtering!', 2000);
+                }
+            } else {
+                showNotification('Could not find chapter list!', 2000);
+            }
+        } catch (error) {
+            console.error('[Novel Translator] Auto-run error:', error);
+            showNotification('Error finding chapter!', 2000);
+        }
+    };
+
+    // Add to page
+    document.body.appendChild(floatingButton);
+}
+
 // Function to handle auto input
 async function handleAutoInput() {
     const content = await safeStorageGet(['translationContent']);
@@ -369,42 +482,6 @@ async function handleAutoInput() {
     if (translation) {
         // Save translation
         await saveTranslation(translation, content.novelUrl);
-    }
-}
-
-// Function to initialize based on current page
-async function initialize() {
-    console.log('[Novel Translator] Initializing on page:', window.location.href);
-    
-    if (window.location.href.includes('localhost:3000/chapter/')) {
-        // Add both buttons on localhost chapter page
-        addTranslateButton();
-        addTruyencityButton();
-    } else if (window.location.href.includes('truyencity.com/admin/stories') && window.location.href.includes('/chapters/')) {
-        // On Truyencity edit page, check for pending content
-        console.log('[Novel Translator] On chapter edit page, checking for pending content');
-        const { pendingContent } = await safeStorageGet(['pendingContent']);
-        if (pendingContent) {
-            console.log('[Novel Translator] Found pending content, filling chapter');
-            // Clear the pending content first to avoid loops
-            await safeStorageSet({ pendingContent: null });
-            
-            // Wait for truyencityTools to be available
-            let attempts = 0;
-            const maxAttempts = 10;
-            while (!window.truyencityTools && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                attempts++;
-            }
-            
-            if (window.truyencityTools) {
-                console.log('[Novel Translator] truyencityTools found, filling content');
-                const result = await window.truyencityTools.fillChapterContent(pendingContent);
-                console.log('[Novel Translator] Fill chapter result:', result);
-            } else {
-                console.error('[Novel Translator] truyencityTools not found after waiting');
-            }
-        }
     }
 }
 
@@ -718,6 +795,46 @@ async function clickMarkDoneButton() {
     return false;
 }
 
+// Function to initialize based on current page
+async function initialize() {
+    const url = window.location.href;
+    
+    if (url.includes('chat.openai.com')) {
+        // ChatGPT page initialization
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoInput = urlParams.get('autoInput');
+        
+        if (autoInput === 'true') {
+            handleAutoInput();
+        }
+    } else if (url.includes('localhost:3000')) {
+        // Add translate button
+        addTranslateButton();
+        // Add Truyencity button
+        addTruyencityButton();
+        // Add floating auto-run button
+        addFloatingAutoRunButton();
+
+        // Check if we need to auto-translate
+        if (url.includes('/chapter/') && localStorage.getItem('autoTranslateNext') === 'true') {
+            localStorage.removeItem('autoTranslateNext'); // Clear the flag
+            // Wait 3 seconds for the page to fully load
+            setTimeout(() => {
+                const translateButton = Array.from(document.querySelectorAll('button'))
+                    .find(button => {
+                        const iconAndText = button.textContent?.toLowerCase() || '';
+                        return iconAndText.includes('translate') && iconAndText.includes('chatgpt');
+                    });
+                
+                if (translateButton) {
+                    translateButton.click();
+                    showNotification('Starting translation...', 2000);
+                }
+            }, 3000); // Wait 3 seconds for page to load
+        }
+    }
+}
+
 // Listen for messages from the webpage
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('[Novel Translator] Received message:', message);
@@ -802,6 +919,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('[Novel Translator] Post completed successfully, clicking Mark Done button');
         clickMarkDoneButton().then(result => {
             console.log('[Novel Translator] Mark Done button click result:', result);
+            // After marking as done, find and click the Auto Run button
+            setTimeout(() => {
+                const autoRunButton = Array.from(document.querySelectorAll('div'))
+                    .find(div => {
+                        const iconAndText = div.textContent?.trim() || '';
+                        return iconAndText === '🔄Auto Run';
+                    });
+                
+                if (autoRunButton) {
+                    console.log('[Novel Translator] Found Auto Run button, clicking...');
+                    autoRunButton.click();
+                }
+            }, 3000); // Wait 3 second before clicking Auto Run
         });
         return true;
     }
