@@ -212,6 +212,7 @@ async function injectContentToChatGPT(content) {
             'textarea'
         ];
         
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const inputElement = await waitForElement(inputSelectors);
         
         if (!inputElement) {
@@ -220,7 +221,7 @@ async function injectContentToChatGPT(content) {
 
         console.log('[Novel Translator] Found input element:', inputElement);
 
-        // Handle both contenteditable div and textarea cases
+        await new Promise(resolve => setTimeout(resolve, 3000));
         if (inputElement.getAttribute('contenteditable') === 'true') {
             inputElement.innerHTML = content;
             // Trigger input event for contenteditable
@@ -231,22 +232,23 @@ async function injectContentToChatGPT(content) {
             // Trigger input event for textarea
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
         }
-
-        // Try to find and click the send button
+        //try find send button
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const sendButtonSelectors = [
             'button[data-testid="send-button"]',
             'button[aria-label*="Send"]',
+            'button[aria-label*="Gửi lời nhắc"]',
             'button[type="submit"]',
             'button.send-button',
-            'button:has(svg)' // Button containing an SVG icon
         ];
-
+        
         const sendButton = await waitForElement(sendButtonSelectors);
         if (!sendButton) {
             throw new Error('Could not find send button');
         }
 
         console.log('[Novel Translator] Found send button:', sendButton);
+        await new Promise(resolve => setTimeout(resolve, 3000));
         sendButton.click();
     } catch (error) {
         console.error('[Novel Translator] Error injecting content:', error);
