@@ -10,7 +10,7 @@ document.getElementById('translateButton').addEventListener('click', async () =>
 
 function getAndTranslateContent() {
   const content = document.querySelector('.chapter-content')?.textContent || '';
-  const chatGPTUrl = 'https://chatgpt.com/g/g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi';
+  const chatGPTUrl = 'https://chatgpt.com/g/g-676165fe70708191a7d1c18fa897b935-dich-truyen-do-thi';
   
   // Open ChatGPT in a new tab
   const newTab = window.open(chatGPTUrl, '_blank');
