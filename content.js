@@ -129,7 +129,12 @@ async function waitForResponse() {
     console.log('[Novel Translator] Waiting for ChatGPT response');
     
     return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
+        const delay = 3000; // 3 second delay
+        
+        const checkInterval = setInterval(async () => {
+            // Add delay before each check
+            await new Promise(r => setTimeout(r, delay));
+            
             const copyButton = document.querySelector('button[data-testid="copy-button"]');
             if (copyButton) {
                 clearInterval(checkInterval);

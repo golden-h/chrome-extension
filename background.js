@@ -13,7 +13,7 @@ function log(level, message, data = {}) {
 console.log('BACKGROUND SCRIPT STARTING - IMMEDIATE LOG');
 
 // Constants
-const CHATGPT_URL = 'https://chatgpt.com/g/g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi';
+const CHATGPT_URL = 'https://chatgpt.com/g/g-676165fe70708191a7d1c18fa897b935-dich-truyen-do-thi';
 const DEBUG = true;
 
 // Enhanced logging function
