@@ -516,7 +516,7 @@ async function sendContentToChatGPT(content) {
         });
 
         // Open ChatGPT in new tab
-        const chatGPTUrl = 'https://chat.openai.com/g/g-6749b358a57c8191a95344323c84c1e1-dich-truyen-tieng-trung-do-thi';
+        const chatGPTUrl = 'https://chatgpt.com/g/g-676165fe70708191a7d1c18fa897b935-dich-truyen-do-thi';
         await chrome.tabs.create({ url: chatGPTUrl });
 
     } catch (error) {
