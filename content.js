@@ -46,14 +46,19 @@ async function safeStorageGet(keys) {
 
 // Function to extract original content
 function extractOriginalContent() {
-    // First try to find the content in the original-content div
+    // Get the title first
+    const titleDiv = document.querySelector('div.original-title');
     const contentDiv = document.querySelector('div.original-content');
-    if (!contentDiv) {
-        console.log('[Novel Translator] Could not find original content div');
+    
+    if (!titleDiv || !contentDiv) {
+        console.log('[Novel Translator] Could not find original title or content div');
         return null;
     }
 
-    // Get all text nodes within the div, excluding nested elements' text
+    // Extract title text
+    const title = titleDiv.textContent?.trim();
+
+    // Get all text nodes within the content div, excluding nested elements' text
     const textNodes = Array.from(contentDiv.childNodes)
         .filter(node => node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE);
     
@@ -63,13 +68,16 @@ function extractOriginalContent() {
         .filter(text => text) // Remove empty strings
         .join('\n');
 
-    if (!content) {
-        console.log('[Novel Translator] No content found in div');
+    if (!title || !content) {
+        console.log('[Novel Translator] No title or content found in div');
         return null;
     }
 
-    console.log('[Novel Translator] Successfully extracted content');
-    return content;
+    // Combine title and content with proper formatting
+    const fullContent = `${title}\n\n${content}`;
+
+    console.log('[Novel Translator] Successfully extracted title and content');
+    return fullContent;
 }
 
 // Function to inject content to ChatGPT input
